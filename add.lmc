@@ -1,0 +1,6 @@
+INP
+STA X
+INP
+ADD X
+HLT
+X DAT 12
