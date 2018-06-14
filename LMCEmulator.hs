@@ -131,13 +131,6 @@ readLine str lineNo labels
     | otherwise = readThreeWords strs lineNo labels
     where strs = words str
 
-{-
-removeLabel words    
-    | isDigitStr $ last words = words
-    | otherwise = words $ (unwords (init words)) ++ " " ++ show 
--}
-
-
 machineCodeToLine :: Int -> Line
 machineCodeToLine machineCode
     | machineCode == 901 = Line { label = Nothing, mnemonic = INP, address = Nothing}
@@ -148,10 +141,23 @@ machineCodeToLine machineCode
             address = Just (read $ tail $ show machineCode :: Int)
         }
 
-{-
+mnemonicToInt :: Mnemonic -> Int
+mnemonicToInt m 
+    | m == HLT = 0
+    | m == ADD = 1
+    | m == SUB = 2
+    | m == STA = 3
+    | m == LDA = 5
+    | m == BRA = 6
+    | m == BRZ = 7
+    | m == BRP = 8
+    | otherwise = -1
+
 lineToMachineCode :: Line -> Int
-lineToMachineCode Line { label = l} 
--}
+lineToMachineCode Line{ label = _, mnemonic = m, address = a}
+    | m == INP = 901
+    | m == OUT = 902
+    | otherwise = read $ show(mnemonicToInt m) ++ show(fromJust(a))
 
 readLinesProg :: [String] -> Int -> [Maybe Label] -> [Line]
 readLinesProg [] n labels =  []
@@ -160,10 +166,6 @@ readLinesProg (x:xs) n labels =
 
 readLines :: [String] -> [Maybe Label] -> [Line]
 readLines xs = readLinesProg xs 0 
-
-{-
-labels :: String -> [Line]
--}
 
 getLabelsFromFile filename = do
     contents <- readFile filename
