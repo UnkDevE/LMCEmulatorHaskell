@@ -19,6 +19,12 @@ data Line = Line {
     address :: Maybe Int
 } deriving (Show, Read, Eq)
 
+data Enviroment = Enviroment {
+    acc :: Int,
+    pc :: Int,
+    ram :: Map.Map Int Int  
+}
+
 first :: [a] -> a
 first (x:_) = x
 
@@ -151,12 +157,14 @@ mnemonicToInt m
     | m == BRA = 6
     | m == BRZ = 7
     | m == BRP = 8
+    | m == DAT = 9
     | otherwise = -1
 
 lineToMachineCode :: Line -> Int
 lineToMachineCode Line{ label = _, mnemonic = m, address = a}
     | m == INP = 901
     | m == OUT = 902
+    | m == HLT = 0
     | otherwise = read $ show(mnemonicToInt m) ++ show(fromJust(a))
 
 readLinesProg :: [String] -> Int -> [Maybe Label] -> [Line]
@@ -177,4 +185,52 @@ getLinesFromFile filename = do
     contents <- readFile filename
     let ls = readLines (lines contents) labels
     return ls
+
+assembleLinesProg :: [Line] -> Int -> [(Int, Int)]
+assembleLinesProg ls n
+    | length ls > n = [(n, lineToMachineCode (ls!!n))] ++ assembleLinesProg ls (n+1)
+    | otherwise = []  
+
+assembleLines :: [Line] -> Enviroment
+assembleLines ls = Enviroment{ acc = 0, pc = 0, ram = Map.fromList $ assembleLinesProg ls 0}
+
+accHelper :: Enviroment -> Int -> (Enviroment -> Int -> Int) -> Enviroment
+accHelper env adr f = Enviroment { acc = (f env adr), pc = pc env + 1, ram = ram env}
+
+add :: Enviroment -> Int -> Enviroment
+add env adr = accHelper env adr (\env adr -> (acc env) + (fromJust $ Map.lookup adr $ ram env))
+
+sub :: Enviroment -> Int -> Enviroment
+sub env adr = accHelper env adr (\env adr -> (acc env) - (fromJust $ Map.lookup adr $ ram env))
+
+lda :: Enviroment -> Int -> Enviroment
+lda env adr = accHelper env adr (\env adr -> fromJust $ Map.lookup adr $ ram env)
+
+sta :: Enviroment -> Int -> Enviroment
+sta env adr = Enviroment { 
+    acc = acc env, 
+    pc = pc env + 1, 
+    ram = Map.insert adr (acc env) $ ram env
+}
+
+pcHelper :: Enviroment -> Int -> (Enviroment -> Int -> Int) -> Enviroment
+pcHelper env adr f = Enviroment { acc = acc env, pc = f env adr, ram = ram env}
+
+brp :: Enviroment -> Int -> Enviroment
+brp env adr = pcHelper env adr (\env adr -> if (acc env) >= 0 then 
+                                              fromJust $ Map.lookup adr $ ram env 
+                                            else pc env
+                               ) 
+
+brz :: Enviroment -> Int -> Enviroment
+brz env adr = pcHelper env adr (\env adr -> if (acc env) == 0 then 
+                                              fromJust $ Map.lookup adr $ ram env 
+                                            else pc env
+                               ) 
+
+bra :: Enviroment -> Int -> Enviroment
+bra env adr = pcHelper env adr (\env adr -> fromJust $ Map.lookup adr $ ram env)
+
+hlt :: Enviroment -> Int -> Enviroment
+hlt env adr = pcHelper env adr (\env adr -> -1)
 
