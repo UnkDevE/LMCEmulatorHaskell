@@ -1,9 +1,21 @@
 module LMCEmulator (
+    Enviroment,
+    Line,
+    Label,
+    runRam,
+    readLine,
+    readLines,
+    runLine,
+    getLinesFromFile,
+    getLabelsFromFile,
+    machineCodeToLine,
+    lineToMachineCode
 ) where 
 
 import qualified Data.Map as Map
 import Data.Char
 import Data.Maybe
+import System.IO.Unsafe
 
 data Mnemonic = HLT | ADD | SUB | STA | LDA | BRA | BRZ | BRP | INP | OUT | DAT
     deriving ( Eq, Ord, Show, Read, Bounded, Enum)
@@ -81,7 +93,6 @@ getLabelsProg (str:strs) n =
 
 getLabels :: [String] -> [Maybe Label]
 getLabels strs = getLabelsProg strs 0
-
 
 maybeName :: Maybe Label -> Maybe String
 maybeName label 
@@ -175,11 +186,13 @@ readLinesProg (x:xs) n labels =
 readLines :: [String] -> [Maybe Label] -> [Line]
 readLines xs = readLinesProg xs 0 
 
+getLabelsFromFile :: String -> IO [Maybe Label]
 getLabelsFromFile filename = do
     contents <- readFile filename
     let ls = getLabels $ lines contents
     return ls
 
+getLinesFromFile :: String -> IO [Line]
 getLinesFromFile filename = do
     labels <- getLabelsFromFile filename 
     contents <- readFile filename
@@ -234,3 +247,34 @@ bra env adr = pcHelper env adr (\env adr -> fromJust $ Map.lookup adr $ ram env)
 hlt :: Enviroment -> Int -> Enviroment
 hlt env adr = pcHelper env adr (\env adr -> -1)
 
+inp :: Enviroment -> IO Enviroment 
+inp env = do
+    val <- readLn :: IO Int
+    return Enviroment{acc = val, pc = pc env + 1, ram = ram env}
+
+out :: Enviroment -> IO Enviroment 
+out env = do
+    putStrLn $ show (acc env)
+    return env
+
+runLine :: Line -> Enviroment -> Enviroment 
+runLine Line{label = _, mnemonic = m, address = a} env 
+    | m == HLT = hlt env adr 
+    | m == ADD = add env adr
+    | m == SUB = sub env adr
+    | m == STA = sta env adr
+    | m == LDA = lda env adr
+    | m == BRP = brp env adr
+    | m == BRA = bra env adr
+    | m == BRZ = brz env adr
+    | m == INP = unsafePerformIO $ inp env
+    | m == OUT = unsafePerformIO $ out env
+    | otherwise = env
+    where adr = fromJust a
+
+runRam :: Enviroment -> Enviroment
+runRam env 
+    | val == Nothing = runLine Line{label = Nothing, mnemonic = HLT, address= Nothing} env
+    | pc env /= -1 = runLine (machineCodeToLine(fromJust(val))) $ runRam env
+    | otherwise = env
+    where val = Map.lookup (pc env) (ram env)
