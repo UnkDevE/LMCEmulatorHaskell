@@ -1,7 +1,7 @@
 module LMCEmulator (
-    Enviroment,
-    Line,
-    Label,
+    Enviroment(..),
+    Line(..),
+    Label(..),
     runRam,
     readLine,
     readLines,
@@ -9,7 +9,8 @@ module LMCEmulator (
     getLinesFromFile,
     getLabelsFromFile,
     machineCodeToLine,
-    lineToMachineCode
+    lineToMachineCode,
+    assembleLines
 ) where 
 
 import qualified Data.Map as Map
@@ -35,7 +36,7 @@ data Enviroment = Enviroment {
     acc :: Int,
     pc :: Int,
     ram :: Map.Map Int Int  
-}
+} deriving (Show, Read, Eq)
 
 first :: [a] -> a
 first (x:_) = x
@@ -255,7 +256,7 @@ inp env = do
 out :: Enviroment -> IO Enviroment 
 out env = do
     putStrLn $ show (acc env)
-    return env
+    return Enviroment{acc = acc env, pc = pc env + 1, ram = ram env} 
 
 runLine :: Line -> Enviroment -> Enviroment 
 runLine Line{label = _, mnemonic = m, address = a} env 
