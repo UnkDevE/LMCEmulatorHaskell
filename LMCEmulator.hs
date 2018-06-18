@@ -160,17 +160,16 @@ machineCodeToLine machineCode
         }
 
 mnemonicToInt :: Mnemonic -> Int
-mnemonicToInt m 
-    | m == HLT = 0
-    | m == ADD = 1
-    | m == SUB = 2
-    | m == STA = 3
-    | m == LDA = 5
-    | m == BRA = 6
-    | m == BRZ = 7
-    | m == BRP = 8
-    | m == DAT = 9
-    | otherwise = -1
+mnemonicToInt HLT = 0
+mnemonicToInt ADD = 1
+mnemonicToInt SUB = 2
+mnemonicToInt STA = 3
+mnemonicToInt LDA = 5
+mnemonicToInt BRA = 6
+mnemonicToInt BRZ = 7
+mnemonicToInt BRP = 8
+mnemonicToInt DAT = 9
+mnemonicToInt m = -1
 
 lineToMachineCode :: Line -> Int
 lineToMachineCode Line{ label = _, mnemonic = m, address = a}
@@ -255,7 +254,7 @@ inp env = do
 
 out :: Enviroment -> IO Enviroment 
 out env = do
-    putStrLn $ show (acc env)
+    putStrLn $ show $ acc env
     return Enviroment{acc = acc env, pc = pc env + 1, ram = ram env} 
 
 runLine :: Line -> Enviroment -> Enviroment 
@@ -276,6 +275,6 @@ runLine Line{label = _, mnemonic = m, address = a} env
 runRam :: Enviroment -> Enviroment
 runRam env 
     | val == Nothing = runLine Line{label = Nothing, mnemonic = HLT, address= Nothing} env
-    | pc env /= -1 = runLine (machineCodeToLine(fromJust(val))) $ runRam env
+    | pc env /= -1 = runRam $ runLine (machineCodeToLine(fromJust(val))) env
     | otherwise = env
     where val = Map.lookup (pc env) (ram env)
