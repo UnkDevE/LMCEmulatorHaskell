@@ -56,15 +56,14 @@ toUpperStr [x] = [toUpper(x)]
 toUpperStr (x:xs) = toUpper(x):toUpperStr(xs)
 
 intToMnemonic :: Int -> Mnemonic 
-intToMnemonic i  
-    | i == 0 = HLT
-    | i == 1 = ADD
-    | i == 2 = SUB
-    | i == 3 = STA
-    | i == 5 = LDA
-    | i == 6 = BRA
-    | i == 7 = BRZ
-    | i == 8 = BRP
+intToMnemonic 0 = HLT
+intToMnemonic 1 = ADD
+intToMnemonic 2 = SUB
+intToMnemonic 3 = STA
+intToMnemonic 5 = LDA
+intToMnemonic 6 = BRA
+intToMnemonic 7 = BRZ
+intToMnemonic 8 = BRP
 
 mnemonics = ["HLT", "ADD", "SUB", "STA", "LDA", "BRA", "BRZ", "BRP", "INP", "OUT", "DAT"]
 
@@ -150,10 +149,9 @@ readLine str lineNo labels
     where strs = words str
 
 machineCodeToLine :: Int -> Line
-machineCodeToLine machineCode
-    | machineCode == 901 = Line { label = Nothing, mnemonic = INP, address = Nothing}
-    | machineCode == 902 = Line { label = Nothing, mnemonic = OUT, address = Nothing}
-    | otherwise =  Line { 
+machineCodeToLine 901 = Line { label = Nothing, mnemonic = INP, address = Nothing}
+machineCodeToLine 902 = Line { label = Nothing, mnemonic = OUT, address = Nothing}
+machineCodeToLine machineCode = Line { 
             label = Nothing, 
             mnemonic = intToMnemonic (digitToInt $ head $ show machineCode :: Int), 
             address = Just (read $ tail $ show machineCode :: Int)
@@ -172,11 +170,11 @@ mnemonicToInt DAT = 9
 mnemonicToInt m = -1
 
 lineToMachineCode :: Line -> Int
-lineToMachineCode Line{ label = _, mnemonic = m, address = a}
-    | m == INP = 901
-    | m == OUT = 902
-    | m == HLT = 0
-    | otherwise = read $ show(mnemonicToInt m) ++ show(fromJust(a))
+lineToMachineCode Line{ label = _, mnemonic = INP, address = _} = 901
+lineToMachineCode Line{ label = _, mnemonic = OUT, address = _} = 902
+lineToMachineCode Line{ label = _, mnemonic = HLT, address = _} = 0
+lineToMachineCode Line{ label = _, mnemonic = m, address = a} = 
+    read $ show(mnemonicToInt m) ++ show(fromJust(a))
 
 readLinesProg :: [String] -> Int -> [Maybe Label] -> [Line]
 readLinesProg [] n labels =  []
@@ -258,19 +256,17 @@ out env = do
     return Enviroment{acc = acc env, pc = pc env + 1, ram = ram env} 
 
 runLine :: Line -> Enviroment -> Enviroment 
-runLine Line{label = _, mnemonic = m, address = a} env 
-    | m == HLT = hlt env adr 
-    | m == ADD = add env adr
-    | m == SUB = sub env adr
-    | m == STA = sta env adr
-    | m == LDA = lda env adr
-    | m == BRP = brp env adr
-    | m == BRA = bra env adr
-    | m == BRZ = brz env adr
-    | m == INP = unsafePerformIO $ inp env
-    | m == OUT = unsafePerformIO $ out env
-    | otherwise = env
-    where adr = fromJust a
+runLine Line{label = _, mnemonic = HLT, address = a} env = hlt env $ fromJust a
+runLine Line{label = _, mnemonic = ADD, address = a} env = add env $ fromJust a
+runLine Line{label = _, mnemonic = SUB, address = a} env = sub env $ fromJust a
+runLine Line{label = _, mnemonic = STA, address = a} env = sta env $ fromJust a
+runLine Line{label = _, mnemonic = LDA, address = a} env = lda env $ fromJust a
+runLine Line{label = _, mnemonic = BRP, address = a} env = brp env $ fromJust a
+runLine Line{label = _, mnemonic = BRA, address = a} env = bra env $ fromJust a
+runLine Line{label = _, mnemonic = BRZ, address = a} env = brz env $ fromJust a
+runLine Line{label = _, mnemonic = INP, address = a} env = unsafePerformIO $ inp env 
+runLine Line{label = _, mnemonic = OUT, address = a} env = unsafePerformIO $ out env 
+runLine Line{label = _, mnemonic = m, address = a} env  = env
 
 runRam :: Enviroment -> Enviroment
 runRam env 
