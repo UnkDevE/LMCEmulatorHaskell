@@ -255,22 +255,22 @@ out env = do
     putStrLn $ show $ acc env
     return Enviroment{acc = acc env, pc = pc env + 1, ram = ram env} 
 
-runLine :: Line -> Enviroment -> Enviroment 
-runLine Line{label = _, mnemonic = HLT, address = a} env = hlt env $ fromJust a
-runLine Line{label = _, mnemonic = ADD, address = a} env = add env $ fromJust a
-runLine Line{label = _, mnemonic = SUB, address = a} env = sub env $ fromJust a
-runLine Line{label = _, mnemonic = STA, address = a} env = sta env $ fromJust a
-runLine Line{label = _, mnemonic = LDA, address = a} env = lda env $ fromJust a
-runLine Line{label = _, mnemonic = BRP, address = a} env = brp env $ fromJust a
-runLine Line{label = _, mnemonic = BRA, address = a} env = bra env $ fromJust a
-runLine Line{label = _, mnemonic = BRZ, address = a} env = brz env $ fromJust a
-runLine Line{label = _, mnemonic = INP, address = a} env = unsafePerformIO $ inp env 
-runLine Line{label = _, mnemonic = OUT, address = a} env = unsafePerformIO $ out env 
-runLine Line{label = _, mnemonic = m, address = a} env  = env
+runLine :: Line -> Enviroment -> IO Enviroment 
+runLine Line{label = _, mnemonic = HLT, address = a} env = return . hlt env $ fromJust a
+runLine Line{label = _, mnemonic = ADD, address = a} env = return . add env $ fromJust a
+runLine Line{label = _, mnemonic = SUB, address = a} env = return . sub env $ fromJust a
+runLine Line{label = _, mnemonic = STA, address = a} env = return . sta env $ fromJust a
+runLine Line{label = _, mnemonic = LDA, address = a} env = return . lda env $ fromJust a
+runLine Line{label = _, mnemonic = BRP, address = a} env = return . brp env $ fromJust a
+runLine Line{label = _, mnemonic = BRA, address = a} env = return . bra env $ fromJust a
+runLine Line{label = _, mnemonic = BRZ, address = a} env = return . brz env $ fromJust a
+runLine Line{label = _, mnemonic = INP, address = a} env = inp env 
+runLine Line{label = _, mnemonic = OUT, address = a} env = out env 
 
-runRam :: Enviroment -> Enviroment
+runRam :: Enviroment -> IO Enviroment
 runRam env 
     | val == Nothing = runLine Line{label = Nothing, mnemonic = HLT, address= Nothing} env
-    | pc env /= -1 = runRam $ runLine (machineCodeToLine(fromJust(val))) env
-    | otherwise = env
+    | pc env /= -1 = do
+        e <- runLine (machineCodeToLine(fromJust(val))) env
+        runRam e
     where val = Map.lookup (pc env) (ram env)
